@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms, utils
 
 from model import VQVAE, GSSOFT
+from utils import compute_logits
 
 
 def save_checkpoint(model, optimizer, step, checkpoint_dir):
@@ -258,6 +259,12 @@ def train_vqvae(args):
 
         print("epoch:{}, logp:{:.3E}, vq loss:{:.3E}, elbo:{:.3f}, bpd:{:.3f}, perplexity:{:.3f}"
               .format(epoch, average_logp, average_vq_loss, average_elbo, average_bpd, average_perplexity))
+    save_checkpoint(model, optimizer, 0, Path("."))
+    torch.save(compute_logits(
+        model=model,
+        dataloader=training_dataloader,
+        device=device
+    ), "logits.pt")
 
 
 if __name__ == "__main__":

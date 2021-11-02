@@ -18,7 +18,32 @@ class VQEmbeddingEMA(nn.Module):
         self.register_buffer("ema_count", torch.zeros(latent_dim, num_embeddings))
         self.register_buffer("ema_weight", self.embedding.clone())
 
-    def forward(self, x):
+    def quantize(self, prior_logits: torch.Tensor) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        prior_logits: Logits computed by the trained prior, one hot encoded, with shape
+        `(N, B, H, W, M)`.
+
+        Returns
+        -------
+        Quantized tensor with shape `(B, N*D, H, W)`.
+        """
+        N, B, H, W, M = prior_logits.shape
+        N, M_, D = self.embedding.size()
+        C = N * D
+        assert M == M_, f"Input and self embedding dimension mismtach, got {M} from input and {M_} from self."
+
+        distances = prior_logits.view(N, B*H*W, M)
+
+        indices = torch.argmin(distances, dim=-1)
+        encodings = F.one_hot(indices, M).float()
+        quantized = torch.gather(self.embedding, 1, indices.unsqueeze(-1).expand(-1, -1, D))
+        quantized = quantized.view(N, B, H, W, D)
+
+        return quantized.permute(1, 0, 4, 2, 3).reshape(B, C, H, W)
+
+    def forward(self, x, prior_logits=None):
         B, C, H, W = x.size()
         N, M, D = self.embedding.size()
         assert C == N * D
@@ -30,6 +55,9 @@ class VQEmbeddingEMA(nn.Module):
                                   torch.sum(x_flat ** 2, dim=2, keepdim=True),
                                   x_flat, self.embedding.transpose(1, 2),
                                   alpha=-2.0, beta=1.0)
+
+        # Save distances for export
+        self.distances = distances.view(N, B, W, H, M)
 
         indices = torch.argmin(distances, dim=-1)
         encodings = F.one_hot(indices, M).float()
@@ -171,6 +199,11 @@ class VQVAE(nn.Module):
         x, loss, perplexity = self.codebook(x)
         dist = self.decoder(x)
         return dist, loss, perplexity
+
+    def decode(self, prior_logits):
+        x = self.codebook.quantize(prior_logits=prior_logits)
+        dist = self.decoder(x)
+        return dist
 
 
 class GSSOFT(nn.Module):

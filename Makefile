@@ -8,6 +8,7 @@ channels = 256
 # Training
 batchsize = 32
 trainingsteps = 100000
+numworkers=1
 
 all: model.ckpt-0.pt
 model.ckpt-0.pt: train.py
@@ -16,4 +17,5 @@ model.ckpt-0.pt: train.py
 	    --num-embeddings=$(numembeddings) \
 	    --channels=$(channels) \
 	    --batch-size=$(batchsize) \
-	    --num-training-steps=$(trainingsteps)
+	    --num-training-steps=$(trainingsteps) \
+	    --num-workers=$(numworkers)

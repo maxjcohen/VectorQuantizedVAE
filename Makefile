@@ -1,13 +1,13 @@
 # Encodings
 latentdim = 1
-numembeddings = 16
+numembeddings = 512
 
 # Encoder
-channels = 32
+channels = 256
 
 # Training
-batchsize = 16
-trainingsteps = 5
+batchsize = 32
+trainingsteps = 100000
 
 all: model.ckpt-0.pt
 model.ckpt-0.pt: train.py

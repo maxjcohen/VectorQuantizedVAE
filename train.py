@@ -192,7 +192,7 @@ def train_vqvae(args):
 
     for epoch in range(start_epoch, num_epochs + 1):
         model.train()
-        average_logp = average_vq_loss = average_elbo = average_bpd = average_perplexity = 0
+        average_logp = average_vq_loss = average_elbo = average_bpd = average_perplexity = average_reconstruction_cost = 0
         for i, (images, _) in enumerate(tqdm(training_dataloader), 1):
             images = images.to(device)
 
@@ -203,6 +203,9 @@ def train_vqvae(args):
             loss = - logp / N + vq_loss
             elbo = (KL - logp) / N
             bpd = elbo / np.log(2)
+            reconstructions = dist.probs.argmax(dim=-1)
+            reconstructions = shift(reconstructions/255)
+            reconstruction_cost = (reconstructions - images).square().mean()
 
             optimizer.zero_grad()
             loss.backward()
@@ -218,6 +221,8 @@ def train_vqvae(args):
             average_elbo += (elbo.item() - average_elbo) / i
             average_bpd += (bpd.item() - average_bpd) / i
             average_perplexity += (perplexity.item() - average_perplexity) / i
+            average_reconstruction_cost += (reconstruction_cost.item() - average_reconstruction_cost) / i
+
 
         writer.add_scalar("logp/train", average_logp, epoch)
         writer.add_scalar("kl/train", KL, epoch)
@@ -225,9 +230,10 @@ def train_vqvae(args):
         writer.add_scalar("elbo/train", average_elbo, epoch)
         writer.add_scalar("bpd/train", average_bpd, epoch)
         writer.add_scalar("perplexity/train", average_perplexity, epoch)
+        writer.add_scalar("reconstruction_cost/train", average_reconstruction_cost, epoch)
 
         model.eval()
-        average_logp = average_vq_loss = average_elbo = average_bpd = average_perplexity = 0
+        average_logp = average_vq_loss = average_elbo = average_bpd = average_perplexity = average_reconstruction_cost = 0
         for i, (images, _) in enumerate(test_dataloader, 1):
             images = images.to(device)
 
@@ -239,12 +245,16 @@ def train_vqvae(args):
             logp = dist.log_prob(targets).sum((1, 2, 3)).mean()
             elbo = (KL - logp) / N
             bpd = elbo / np.log(2)
+            reconstructions = dist.probs.argmax(dim=-1)
+            reconstructions = shift(reconstructions/255)
+            reconstruction_cost = (reconstructions - images).square().mean()
 
             average_logp += (logp.item() - average_logp) / i
             average_vq_loss += (vq_loss.item() - average_vq_loss) / i
             average_elbo += (elbo.item() - average_elbo) / i
             average_bpd += (bpd.item() - average_bpd) / i
             average_perplexity += (perplexity.item() - average_perplexity) / i
+            average_reconstruction_cost += (reconstruction_cost.item() - average_reconstruction_cost) / i
 
         writer.add_scalar("logp/test", average_logp, epoch)
         writer.add_scalar("kl/test", KL, epoch)
@@ -252,13 +262,14 @@ def train_vqvae(args):
         writer.add_scalar("elbo/test", average_elbo, epoch)
         writer.add_scalar("bpd/test", average_bpd, epoch)
         writer.add_scalar("perplexity/test", average_perplexity, epoch)
+        writer.add_scalar("reconstruction_cost/test", average_reconstruction_cost, epoch)
 
         samples = torch.argmax(dist.logits, dim=-1)
         grid = utils.make_grid(samples.float() / 255)
         writer.add_image("reconstructions", grid, epoch)
 
-        print("epoch:{}, logp:{:.3E}, vq loss:{:.3E}, elbo:{:.3f}, bpd:{:.3f}, perplexity:{:.3f}"
-              .format(epoch, average_logp, average_vq_loss, average_elbo, average_bpd, average_perplexity))
+        print("epoch:{}, logp:{:.3E}, vq loss:{:.3E}, elbo:{:.3f}, bpd:{:.3f}, perplexity:{:.3f}, reconstruction:{:.3f}"
+              .format(epoch, average_logp, average_vq_loss, average_elbo, average_bpd, average_perplexity, average_reconstruction_cost))
     save_checkpoint(model, optimizer, 0, Path("."))
     torch.save(compute_logits(
         model=model,

@@ -10,16 +10,16 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms, utils
 
-from model import VQVAE, GSSOFT
-from utils import compute_logits
+from vqvae.model import VQVAE, GSSOFT
+from src.utils import compute_logits
 
 
-def save_checkpoint(model, optimizer, step, checkpoint_dir):
+def save_checkpoint(model, optimizer, step, checkpoint_dir, filepath:Path=None):
     checkpoint_state = {
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "step": step}
-    checkpoint_path = checkpoint_dir / "model.ckpt-{}.pt".format(step)
+    checkpoint_path = filepath or checkpoint_dir / "model.ckpt-{}.pt".format(step)
     torch.save(checkpoint_state, checkpoint_path)
     print("Saved checkpoint: {}".format(checkpoint_path))
 
@@ -190,7 +190,7 @@ def train_vqvae(args):
     N = 3 * 32 * 32
     KL = args.latent_dim * 8 * 8 * np.log(args.num_embeddings)
 
-    for epoch in range(start_epoch, num_epochs + 1):
+    for epoch in range(start_epoch, num_epochs):
         model.train()
         average_logp = average_vq_loss = average_elbo = average_bpd = average_perplexity = average_reconstruction_cost = 0
         for i, (images, _) in enumerate(tqdm(training_dataloader), 1):
@@ -270,12 +270,13 @@ def train_vqvae(args):
 
         print("epoch:{}, logp:{:.3E}, vq loss:{:.3E}, elbo:{:.3f}, bpd:{:.3f}, perplexity:{:.3f}, reconstruction:{:.3f}"
               .format(epoch, average_logp, average_vq_loss, average_elbo, average_bpd, average_perplexity, average_reconstruction_cost))
-    save_checkpoint(model, optimizer, 0, Path("."))
+    save_checkpoint(model, optimizer, global_step, Path("."), filepath="model.ckpt")
     torch.save(compute_logits(
         model=model,
         dataloader=training_dataloader,
         device_model=device,
-        device_output="cpu"
+        device_output="cpu",
+        indexes=True,
     ), "logits.pt")
 
 

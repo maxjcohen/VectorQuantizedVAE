@@ -3,7 +3,7 @@ from pathlib import Path
 import torch
 import tqdm
 
-from model import VQVAE
+from vqvae.model import VQVAE
 
 
 def compute_logits(
@@ -39,7 +39,7 @@ def compute_logits(
         model(images)
         logit = model.codebook.distances[0].to(device_output)
         if indexes:
-            logit = toch.argmin(logit, dim=-1)
+            logit = torch.argmin(logit, dim=-1)
         logits.append(logit)
 
     return torch.cat(logits, dim=0)

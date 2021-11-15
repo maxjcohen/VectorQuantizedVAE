@@ -6,17 +6,17 @@ numembeddings = 1024
 numworkers=1
 
 # Checkpoint
-checkpoint=VQVAE_C_256_N_1_M_1024_D_32/model.ckpt-250000.pt
+checkpoint=model.ckpt
 
-all: model.ckpt-0.pt
-model.ckpt-0.pt: train.py
+model: $(checkpoint)
+model.ckpt: train.py
 	python train.py --model=VQVAE \
 	    --latent-dim=$(latentdim) \
 	    --num-embeddings=$(numembeddings) \
 	    --num-workers=$(numworkers)
 
 logits: logits.pt
-logits.pt: train.py
+logits.pt: logits.pt $(checkpoint)
 	python train.py --model=VQVAE \
 	    --resume=$(checkpoint) \
 	    --latent-dim=$(latentdim) \

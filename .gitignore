@@ -1,5 +1,6 @@
 # Checkpoints and tensors
 *.pt
+*.ckpt
 /runs/
 
 # Datasets

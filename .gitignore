@@ -4,6 +4,7 @@
 
 # Datasets
 /CIFAR10/
+*.tar.bz
 
 tags
 

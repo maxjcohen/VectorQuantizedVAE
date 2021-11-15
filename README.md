@@ -24,6 +24,6 @@ vqvae = VQVAE(channels=256,
               latent_dim=1,
               num_embeddings=1024,
               embedding_dim=32)
-checkpoint = torch.load("model.ckpt-0.pt", map_location=lambda storage, loc: storage)
+checkpoint = torch.load("model.ckpt", map_location=lambda storage, loc: storage)
 vqvae.load_state_dict(checkpoint["model"])
 ```

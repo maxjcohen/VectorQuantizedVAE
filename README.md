@@ -1,33 +1,29 @@
 # Vector Quantized VAE
-A PyTorch implementation of [Continuous Relaxation Training of Discrete Latent Variable Image Models](http://bayesiandeeplearning.org/2017/papers/54.pdf).
 
-Ensure you have Python 3.7 and PyTorch 1.2 or greater. 
-To train the `VQVAE` model with 8 categorical dimensions and 128 codes per dimension 
-run the following command:
+## Setup
+
+1. Install requirements and vqvae package
+```bash
+python3 -m venv venv
+. venv/bin/activate
+pip install --ugprade pip wheel
+pip install torch
+pip install git+https://github.com/maxjcohen/VectorQuantizedVAE/@package
 ```
-python train.py --model=VQVAE --latent-dim=8 --num-embeddings=128
-``` 
-To train the `GS-Soft` model use `--model=GSSOFT`. 
-Pretrained weights for the `VQVAE` and `GS-Soft` models can be found 
-[here](https://github.com/bshall/VectorQuantizedVAE/releases/tag/v0.1).
 
-<p align="center">
-    <img src="assets/reconstructions.png?raw=true" alt="VQVAE Reconstructions">
-</p>
+2. Download model checkpoint
+```bash
+curl https://cloud.zagouri.org/index.php/s/dpQRnC4ZbFeKwCo/download -o model.ckpt
+```
 
-The `VQVAE` model gets ~4.82 bpd while the `GS-soft` model gets ~4.6 bpd.
+3. Instanticate model and load checkpoint
+```python
+from vqvae.model import VQVAE
 
-# Analysis of the Codebooks 
-
-As demonstrated in the paper, the codebook matrices are low-dimensional, spanning only a few dimensions:
-
-<p align="center">
-    <img src="assets/variance_ratio.png?raw=true" alt="Explained Variance Ratio">
-</p>
-
-Projecting the codes onto the first 3 principal components shows that the codes typically tile 
-continuous 1- or 2-D manifolds:
-
-<p align="center">
-    <img src="assets/codebooks.png?raw=true" alt="Codebook principal components">
-</p>
+vqvae = VQVAE(channels=256,
+              latent_dim=1,
+              num_embeddings=1024,
+              embedding_dim=32)
+checkpoint = torch.load("model.ckpt-0.pt", map_location=lambda storage, loc: storage)
+vqvae.load_state_dict(checkpoint["model"])
+```

@@ -6,6 +6,7 @@ import tqdm
 from vqvae.model import VQVAE
 
 
+@torch.no_grad()
 def compute_logits(
     model: VQVAE,
     dataloader: iter,

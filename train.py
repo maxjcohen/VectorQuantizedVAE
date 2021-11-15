@@ -273,8 +273,9 @@ def train_vqvae(args):
     save_checkpoint(model, optimizer, 0, Path("."))
     torch.save(compute_logits(
         model=model,
-        dataloader=training_dataloader,
-        device=device
+        dataloader=test_dataloader,
+        device_model=device,
+        device_output="cpu"
     ), "logits.pt")
 
 
